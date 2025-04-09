@@ -4,7 +4,7 @@ on:
   push:
     branches:
       # Kør kun på pushes til 'develop' (eller 'main'/'master' hvis du bruger det)
-      - develop
+      - main
 
 jobs:
   build-and-test:
