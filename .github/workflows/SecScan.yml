@@ -1,0 +1,48 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch: # For manual triggering
+
+jobs:
+  security_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Security scan (Consumer)
+        uses: snyk/actions/dotnet@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          args: "MessageConsumer.csproj"
+
+      - name: Security scan (Producer)
+        uses: snyk/actions/dotnet@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          args: "MessageProducer.csproj"
+
+      - name: Security scan (Shared)
+        uses: snyk/actions/dotnet@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+          args: "MessageShared.csproj"
+
+      # Optional: Add steps to handle Snyk results (e.g., fail the workflow on high severity issues)
+      # - name: Check Snyk results
+      #   run: |

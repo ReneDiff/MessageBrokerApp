@@ -1,0 +1,55 @@
+name: Run Tests with Coverage
+
+on:
+  push:
+    branches:
+      - main
+  #   pull_request:
+  #     branches:
+  #       - main
+  workflow_dispatch: # For manual triggering
+
+jobs:
+  test_and_coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run tests with coverage
+        env:
+          # Hvis dine tests (IKKE Testcontainers) skal bruge DB/MQ, sæt env vars her:
+          ConnectionStrings__PostgresDb: Host=localhost;Port=5432;Username=appuser;Password=secret;Database=messagesdb
+          RabbitMq__HostName: localhost
+        run: |
+          # Kører tests, samler coverage, logger til TRX, og viser output i log + gemmer i fil
+          dotnet test --collect:"XPlat Code Coverage" --logger "trx;LogFileName=TestResults.trx" --results-directory ./TestResults --no-build --configuration Release | tee logfile.txt
+
+      - name: Upload test logs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-run-logs
+          path: logfile.txt
+
+      # Upload TRX test resultater
+      - name: Upload TRX test results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+
+      # Upload coverage rapport (typisk i TestResults/{GUID}/coverage.cobertura.xml)
+      - name: Upload coverage reports artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          # Stien kan variere lidt afhængigt af test runner/collector version
+          path: TestResults/**/coverage.cobertura.xml
