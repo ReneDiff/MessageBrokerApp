@@ -1,0 +1,44 @@
+# .NET build
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+
+# OS-specifikke
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# User-specific files
+*.swp
+*.tmp
+*.bak
+
+# Docker volumes, images etc. (optional)
+**/pgdata/
+docker-compose.override.yml
+
+# Secrets eller konfigurationsfiler
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+.env
+
+# Rider/JetBrains IDE
+.idea/
+
+# Test output
+TestResults/

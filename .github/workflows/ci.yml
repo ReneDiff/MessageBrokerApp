@@ -1,0 +1,120 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      # Kør kun på pushes til 'develop' (eller 'main'/'master' hvis du bruger det)
+      - develop
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      # Service container for PostgreSQL database til brug under tests
+      postgres:
+        image: postgres:15 # Matcher version fra docker-compose
+        env:
+          # Matcher miljøvariabler fra docker-compose for postgres service
+          POSTGRES_USER: appuser
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: messagesdb
+        ports:
+          # Gør den interne port 5432 tilgængelig på localhost:5432 for runneren
+          - 5432:5432
+        # Valgfrit men anbefalet: Vent til databasen er klar
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      # Service container for RabbitMQ til brug under tests
+      rabbitmq:
+        image: rabbitmq:3-management # Matcher version fra docker-compose (eller brug :management for latest)
+        env:
+          # Standard guest/guest bruges implicit hvis disse udelades
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          # Gør interne porte tilgængelige på localhost for runneren
+          - 5672:5672
+          - 15672:15672
+        # Valgfrit men anbefalet: Vent til RabbitMQ er klar
+        options: --health-cmd "rabbitmq-diagnostics -q check_running" --health-interval 10s --health-timeout 5s --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x" # Bruger nyeste .NET 8 SDK patch
+
+      # Cache NuGet pakker for hurtigere builds
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          # Nøgle baseret på OS og hash af projektfiler, der påvirker restore
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}-${{ hashFiles('**/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        # Kører restore for hele solution/projekt-træet
+        run: dotnet restore
+
+      - name: Build the project
+        # Bygger i Release config uden at restore igen
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests with coverage
+        env:
+          # Hvis dine tests (IKKE Testcontainers) skal bruge DB/MQ, sæt env vars her:
+          # ConnectionStrings__PostgresDb: Host=localhost;Port=5432;Username=appuser;Password=secret;Database=messagesdb
+          # RabbitMq__HostName: localhost
+        run: |
+          # Kører tests, samler coverage, logger til TRX, og viser output i log + gemmer i fil
+          dotnet test --collect:"XPlat Code Coverage" --logger "trx;LogFileName=TestResults.trx" --results-directory ./TestResults --no-build --configuration Release | tee logfile.txt
+
+      # Upload rå test logs (fra tee)
+      - name: Upload test logs artifact
+        # Kører altid, selvom tests fejler (for at kunne se log output)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-run-logs
+          path: logfile.txt
+
+      # Upload TRX test resultater
+      - name: Upload test results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+
+      # Upload coverage rapport (typisk i TestResults/{GUID}/coverage.cobertura.xml)
+      - name: Upload coverage reports artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          # Stien kan variere lidt afhængigt af test runner/collector version
+          path: TestResults/**/coverage.cobertura.xml
+
+      # Kør Snyk sikkerhedsscanning (kræver SNYK_TOKEN secret i repo)
+      - name: Security scan with Snyk
+        # Kør kun hvis SNYK_TOKEN er sat
+        if: env.SNYK_TOKEN != null
+        uses: snyk/actions/dotnet@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          # Kommando til Snyk - juster evt. efter behov
+          command: monitor
+
+      # Verificer at publish virker (valgfrit skridt)
+      # - name: Verify publish framework-dependent
+      #   run: dotnet publish ./MessageConsumer/MessageConsumer.csproj --configuration Release --output ./publish/consumer-fd --no-build
+      #
+      # - name: Verify publish self-contained linux
+      #   run: dotnet publish ./MessageConsumer/MessageConsumer.csproj --configuration Release --output ./publish/consumer-sc-linux --self-contained true -r linux-x64 --no-build

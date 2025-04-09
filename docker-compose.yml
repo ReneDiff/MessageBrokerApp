@@ -1,0 +1,84 @@
+version: '3.9'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck: # Valgfrit: Vent til RabbitMQ er klar
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: messagesdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql # Tilføj for at oprette tabel
+    healthcheck: # Valgfrit: Vent til Postgres er klar
+        test: ["CMD-SHELL", "pg_isready -U appuser -d messagesdb"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "8080:80" # Web UI til pgAdmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      postgres:
+        condition: service_healthy # Vent til Postgres er klar
+    
+# --- NY SERVICE: MessageProducer ---
+  producer:
+    build:
+      context: . # Byggekontekst er projektets rodmappe
+      dockerfile: MessageProducer/Dockerfile # Angiv stien til Dockerfilen
+    container_name: message_producer
+    environment:
+      # Sæt miljøet for at bruge appsettings.Development.json (valgfrit)
+      - DOTNET_ENVIRONMENT=Development
+      # Override RabbitMQ hosten til at bruge Docker service navnet
+      - RabbitMq__HostName=rabbitmq
+    depends_on:
+      rabbitmq: # Sikrer at rabbitmq startes før produceren
+          condition: service_healthy # Vent til RabbitMQ er klar
+
+  # --- NY SERVICE: MessageConsumer ---
+  consumer:
+    build:
+      context: .
+      dockerfile: MessageConsumer/Dockerfile
+    container_name: message_consumer
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      # Override RabbitMQ hosten
+      - RabbitMq__HostName=rabbitmq
+      # Override Postgres connection string til at bruge Docker service navne/porte
+      # VIGTIGT: Brug 'postgres' som host og intern port 5432
+      - ConnectionStrings__PostgresDb=Host=postgres;Port=5432;Username=appuser;Password=secret;Database=messagesdb
+    depends_on:
+      rabbitmq:
+          condition: service_healthy
+      postgres:
+          condition: service_healthy
+
+volumes:
+  pgdata:
+
