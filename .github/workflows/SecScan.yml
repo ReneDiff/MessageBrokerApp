@@ -25,7 +25,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
-          args: "MessageConsumer/MessageConsumer.csproj"
+          args: "--file=MessageConsumer/MessageConsumer.csproj"
 
       - name: Security scan (Producer)
         uses: snyk/actions/dotnet@master
@@ -33,7 +33,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
-          args: "MessageProducer/MessageProducer.csproj"
+          args: "--file=MessageProducer/MessageProducer.csproj"
 
       - name: Security scan (Shared)
         uses: snyk/actions/dotnet@master
@@ -41,7 +41,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: monitor
-          args: "MessageShared/MessageShared.csproj"
+          args: "--file=MessageShared/MessageShared.csproj"
 
       # Optional: Add steps to handle Snyk results (e.g., fail the workflow on high severity issues)
       # - name: Check Snyk results
