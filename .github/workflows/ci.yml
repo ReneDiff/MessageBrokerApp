@@ -69,8 +69,8 @@ jobs:
       - name: Run tests with coverage
         env:
           # Hvis dine tests (IKKE Testcontainers) skal bruge DB/MQ, sæt env vars her:
-          # ConnectionStrings__PostgresDb: Host=localhost;Port=5432;Username=appuser;Password=secret;Database=messagesdb
-          # RabbitMq__HostName: localhost
+          ConnectionStrings__PostgresDb: Host=localhost;Port=5432;Username=appuser;Password=secret;Database=messagesdb
+          RabbitMq__HostName: localhost
         run: |
           # Kører tests, samler coverage, logger til TRX, og viser output i log + gemmer i fil
           dotnet test --collect:"XPlat Code Coverage" --logger "trx;LogFileName=TestResults.trx" --results-directory ./TestResults --no-build --configuration Release | tee logfile.txt
