@@ -60,7 +60,6 @@ public class RabbitMqProducer : IDisposable // Implementer IDisposable
             if (!_channel.IsOpen)
             {
                 _logger.LogError("Cannot send message, RabbitMQ channel is not open.");
-                // Overvej mere robust fejlhåndtering her
                 return;
             }
 
