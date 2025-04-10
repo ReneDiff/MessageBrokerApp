@@ -1,5 +1,7 @@
 ﻿using NUnit.Framework;
 using MessageConsumer;
+using MessageConsumer.interfaces;
+using MessageConsumer.Services;
 using MessageShared;
 using System;
 using Microsoft.Extensions.Logging.Abstractions; // <-- TILFØJ DENNE

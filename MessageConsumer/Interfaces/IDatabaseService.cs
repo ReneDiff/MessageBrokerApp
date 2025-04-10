@@ -1,7 +1,7 @@
 using MessageShared;
 using System.Threading.Tasks;
 
-namespace MessageConsumer;
+namespace MessageConsumer.interfaces;
 
 // Abstraktion for at gemme beskeder i databasen.
 

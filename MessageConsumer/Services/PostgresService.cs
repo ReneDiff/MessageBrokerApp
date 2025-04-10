@@ -2,8 +2,9 @@ using MessageShared;
 using System;
 using Npgsql;
 using System.Threading.Tasks; 
+using MessageConsumer.interfaces;
 
-namespace MessageConsumer;
+namespace MessageConsumer.Services;
 
 // Gemmer beskeder i en PostgreSQL-database.
 public class PostgresService : IDatabaseService

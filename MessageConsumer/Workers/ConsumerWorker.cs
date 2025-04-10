@@ -4,8 +4,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MessageConsumer.Services;
 
-namespace MessageConsumer
+namespace MessageConsumer.Workers
 {
     public class ConsumerWorker : IHostedService // Implementer IHostedService direkte for mere kontrol
     {

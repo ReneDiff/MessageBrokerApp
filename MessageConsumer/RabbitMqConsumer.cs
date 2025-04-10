@@ -3,9 +3,10 @@ using RabbitMQ.Client.Events;
 using System.Text;
 using System.Text.Json;
 using MessageShared;
-using Microsoft.Extensions.Logging; // Tilføj logging
-using System; // Tilføj for IDisposable
-using Microsoft.Extensions.Configuration; // Tilføjet for konfiguration
+using Microsoft.Extensions.Logging;
+using System; 
+using MessageConsumer.interfaces;
+using Microsoft.Extensions.Configuration;
 
 
 namespace MessageConsumer;
@@ -15,23 +16,25 @@ namespace MessageConsumer;
 public class RabbitMqConsumer :IDisposable
 {
     private readonly IModel _channel;
-    private readonly IConnection _connection; // Gem forbindelsen for at kunne dispose
+    private readonly IConnection _connection; 
     private readonly IMessageHandler _handler;
     private readonly IDatabaseService _database;
-    private readonly ILogger<RabbitMqConsumer> _logger; // Tilføj logger
-    private const string QueueName = "Message-Queue";
+    private readonly ILogger<RabbitMqConsumer> _logger;
+    private readonly IConfiguration _configuration;
     private string? _consumerTag; // Til at stoppe consumeren
+    private readonly string _queueName;
 
     public RabbitMqConsumer(IMessageHandler handler, IDatabaseService database, ILogger<RabbitMqConsumer> logger, IConfiguration configuration)
     {
         _handler = handler;
         _database = database;
-        _logger = logger; // Gem logger
-        // _configuration = configuration; // Gem evt. configuration hvis den skal bruges andre steder
+        _logger = logger;
+        _configuration = configuration;
 
         // Læs hostname fra konfiguration
         string hostname = configuration["RabbitMq:HostName"] ?? "localhost"; // Brug fallback
         _logger.LogInformation("Consumer connecting to RabbitMQ Host: {HostName}", hostname);
+        _queueName = _configuration["RabbitMq:QueueName"] ?? "Message-Queue";
 
         try
         {
@@ -41,12 +44,12 @@ public class RabbitMqConsumer :IDisposable
             _channel = _connection.CreateModel();
 
             // QueueDeclare uændret, men overvej durable: true senere
-            _channel.QueueDeclare(queue: QueueName,
+            _channel.QueueDeclare(queue: _queueName,
                                     durable: false,
                                     exclusive: false,
                                     autoDelete: false,
                                     arguments: null);
-            _logger.LogInformation("RabbitMQ connection and channel established. Queue '{QueueName}' declared.", QueueName);
+            _logger.LogInformation("RabbitMQ connection and channel established. Queue '{QueueName}' declared.", _queueName);
         }
         catch (Exception ex)
         {
@@ -108,7 +111,7 @@ public class RabbitMqConsumer :IDisposable
                         break;
 
                     case MessageHandlingResult.RequeueWithIncrement:
-                        message.Counter++; // Forøg tæller
+                        message.RetryCount++; // Forøg tæller
                         _logger.LogInformation("Message needs requeue. Incrementing counter to {Counter}. Preparing to requeue after delay.", message.Counter);
 
                         try
@@ -118,9 +121,13 @@ public class RabbitMqConsumer :IDisposable
                             _logger.LogDebug("Delay before requeue finished for message Counter={Counter}", message.Counter);
 
                             var requeuedBody = JsonSerializer.SerializeToUtf8Bytes(message);
-                            // Publicer den *modificerede* besked tilbage til køen
+
+                            // Requeue implementeres her ved manuelt at publicere den opdaterede besked igen.
+                            // Standard alternativer i RabbitMQ er at bruge _channel.BasicNack(ea.DeliveryTag, false, requeue: true)
+                            // for et øjeblikkeligt retry, eller (bedst til fejl efter max retries) at konfigurere
+                            // en Dead Letter Exchange (DLX), hvor beskeden automatisk sendes hen ved Nack(requeue: false).
                             _channel.BasicPublish(exchange: "",
-                                                routingKey: QueueName,
+                                                routingKey: _queueName,
                                                 basicProperties: null, // Overvej persistens her også
                                                 body: requeuedBody);
                             _logger.LogInformation("Message requeued successfully with Counter={Counter}. Acking original message.", message.Counter);
@@ -156,11 +163,11 @@ public class RabbitMqConsumer :IDisposable
         };
 
         // Start consumeren
-        _consumerTag = _channel.BasicConsume(queue: QueueName,
+        _consumerTag = _channel.BasicConsume(queue: _queueName,
                                 autoAck: false, // Manuel acknowledgement er VIGTIGT
                                 consumer: consumer);
 
-        _logger.LogInformation("[Consumer] Listening for messages on queue '{QueueName}'...", QueueName);
+        _logger.LogInformation("[Consumer] Listening for messages on queue '{QueueName}'...", _queueName);
     }
 
     public void StopConsuming()
