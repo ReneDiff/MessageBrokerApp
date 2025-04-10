@@ -1,7 +1,8 @@
 using MessageShared;
 using Microsoft.Extensions.Logging;
+using MessageConsumer.interfaces;
 
-namespace MessageConsumer;
+namespace MessageConsumer.Services;
 
 public class MessageHandler : IMessageHandler
 {
@@ -39,7 +40,7 @@ public class MessageHandler : IMessageHandler
         }
 
             // 3. Tjek for Max Retries -> Kasser
-        if (message.Counter >= MaxRetries)
+        if (message.RetryCount >= MaxRetries)
         {
             _logger.LogWarning("MessageHandler: Max retries ({MaxRetries}) reached. Returning Discard. Counter={Counter}", MaxRetries, counter);
             return MessageHandlingResult.Discard;

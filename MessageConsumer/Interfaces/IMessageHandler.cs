@@ -1,6 +1,6 @@
 using MessageShared;
 
-namespace MessageConsumer;
+namespace MessageConsumer.interfaces;
 
 public interface IMessageHandler
 {

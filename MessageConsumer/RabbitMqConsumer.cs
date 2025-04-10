@@ -5,6 +5,7 @@ using System.Text.Json;
 using MessageShared;
 using Microsoft.Extensions.Logging;
 using System; 
+using MessageConsumer.interfaces;
 using Microsoft.Extensions.Configuration;
 
 
@@ -110,7 +111,7 @@ public class RabbitMqConsumer :IDisposable
                         break;
 
                     case MessageHandlingResult.RequeueWithIncrement:
-                        message.Counter++; // Forøg tæller
+                        message.RetryCount++; // Forøg tæller
                         _logger.LogInformation("Message needs requeue. Incrementing counter to {Counter}. Preparing to requeue after delay.", message.Counter);
 
                         try

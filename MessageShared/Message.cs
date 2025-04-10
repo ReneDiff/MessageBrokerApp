@@ -8,4 +8,6 @@ public class Message
 
     // En tæller, der øges hvis beskeden requeues.
     public int Counter {get; set;}
+
+    public int RetryCount { get; set; } = 0;
 }

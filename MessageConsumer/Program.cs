@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
-using MessageConsumer; // Tilføj dit namespace
-using Microsoft.Extensions.Logging; // Tilføj denne for at logge
-using System; // Tilføjet for InvalidOperationException
-
+using MessageConsumer; 
+using MessageConsumer.interfaces;
+using MessageConsumer.Services;
+using MessageConsumer.Workers;
+using Microsoft.Extensions.Logging; 
+using System; 
 
 public class Program
 {
