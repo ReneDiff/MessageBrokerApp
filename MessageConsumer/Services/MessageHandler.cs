@@ -32,6 +32,12 @@ public class MessageHandler : IMessageHandler
             return MessageHandlingResult.Discard;
         }
 
+            // 3. Tjek for Max Retries -> Kasser
+        if (message.RetryCount >= MaxRetries)
+        {
+            _logger.LogWarning("MessageHandler: Max retries ({MaxRetries}) reached. Returning Discard. Counter={Counter}", MaxRetries, counter);
+            return MessageHandlingResult.Discard;
+        }
             // 2. Tjek for lige sekund -> Gem
         if (message.Timestamp.Second % 2 == 0)
         {
@@ -39,12 +45,6 @@ public class MessageHandler : IMessageHandler
             return MessageHandlingResult.SaveToDatabase;
         }
 
-            // 3. Tjek for Max Retries -> Kasser
-        if (message.RetryCount >= MaxRetries)
-        {
-            _logger.LogWarning("MessageHandler: Max retries ({MaxRetries}) reached. Returning Discard. Counter={Counter}", MaxRetries, counter);
-            return MessageHandlingResult.Discard;
-        }
 
             // 4. Ellers -> Requeue
         _logger.LogInformation("MessageHandler: Timestamp second ({Second}) is odd and retries not exceeded. Returning RequeueWithIncrement. Counter={Counter}", second, counter);

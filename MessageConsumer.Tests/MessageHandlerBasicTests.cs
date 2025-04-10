@@ -4,13 +4,14 @@ using MessageConsumer.interfaces;
 using MessageConsumer.Services;
 using MessageShared;
 using System;
-using Microsoft.Extensions.Logging.Abstractions; // <-- TILFØJ DENNE
-using Microsoft.Extensions.Logging; // Tilføj logging
+using Microsoft.Extensions.Logging.Abstractions; 
+using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis; // Tilføj logging
 
 
 namespace MessageConsumer.Tests;
 
-public class MessageHandlerTests
+public class MessageHandlerBasicTests
 {
     private IMessageHandler _handler = null;
 
@@ -25,44 +26,61 @@ public class MessageHandlerTests
     }
 
     [Test]
-    public void Discards_Message_Older_Than_1Minute()
+    public void HandleMessage_MessageOlderThan1Minute_Discard()
     {
+        // Arrange
+        var now = DateTime.UtcNow;
+        var twoMinutesAgo = now.AddMinutes(-2); // sikrer at beskeden er 2 minutter gammel
+
         var msg = new Message
         {
-            Timestamp = DateTime.UtcNow.AddMinutes(-2),
+            Timestamp = twoMinutesAgo,
             Counter = 1
         };
 
+        // Act
         var result = _handler.HandleMessage(msg);
+
+        // Assert
         Assert.That(result, Is.EqualTo(MessageHandlingResult.Discard));
     }
 
     [Test]
-    public void Saves_Message_With_Even_Seconds()
+    public void HandleMessage_MessageWithEvenSeconds_SaveToDatabase()
     {
-        var evenSecond = DateTime.UtcNow.AddSeconds(0 - DateTime.UtcNow.Second % 2); // sikrer lige sekund
+        // Arrange
+        var now = DateTime.UtcNow;
+        var evenSecond = now.AddSeconds(0 - now.Second % 2); // sikrer lige sekund
+
         var msg = new Message
         {
             Timestamp = evenSecond,
             Counter = 1
         };
 
+        // Act
         var result = _handler.HandleMessage(msg);
+
+        // Assert
         Assert.That(result, Is.EqualTo(MessageHandlingResult.SaveToDatabase));
     }
 
     [Test]
-    public void Requeues_Message_With_Odd_Seconds()
+    public void HandleMessage_MessageWithOddSeconds_RequeueWithIncrement()
     {
-        var oddSeconds = DateTime.UtcNow.AddSeconds(1 - DateTime.UtcNow.Second % 2); // sikrer ulige sekund
+        // Arrange
+        var now = DateTime.UtcNow;
+        var oddSeconds = now.AddSeconds(1 - now.Second % 2); // sikrer ulige sekund
         var msg = new Message
         {
             Timestamp = oddSeconds,
             Counter = 1
         };
 
+        // Act
         var result = _handler.HandleMessage(msg);
         
+        // Assert
         Assert.That(result, Is.EqualTo(MessageHandlingResult.RequeueWithIncrement));
     }
 }
