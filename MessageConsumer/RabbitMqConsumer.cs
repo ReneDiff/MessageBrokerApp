@@ -43,7 +43,7 @@ public class RabbitMqConsumer :IDisposable
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            // QueueDeclare uændret, men overvej durable: true senere
+            // overvej durable: true senere
             _channel.QueueDeclare(queue: _queueName,
                                     durable: false,
                                     exclusive: false,
@@ -80,7 +80,7 @@ public class RabbitMqConsumer :IDisposable
                 messageBodyForLogging = Encoding.UTF8.GetString(body);
                 message = JsonSerializer.Deserialize<Message>(body);
 
-                // *** VIGTIGT: Tjek om beskeden blev deserialiseret korrekt ***
+                // Tjek om beskeden blev deserialiseret korrekt 
                 if (message == null)
                 {
                     _logger.LogError("Failed to deserialize message body to Message object. Body: {BodyString}", messageBodyForLogging);
@@ -112,13 +112,14 @@ public class RabbitMqConsumer :IDisposable
 
                     case MessageHandlingResult.RequeueWithIncrement:
                         message.RetryCount++; // Forøg tæller
-                        _logger.LogInformation("Message needs requeue. Incrementing counter to {Counter}. Preparing to requeue after delay.", message.Counter);
+                        _logger.LogInformation("Message needs requeue. Incrementing RetryCount to {RetryCount}. Original Counter={OriginalCounter}. Preparing to requeue after delay.",
+                                           message.RetryCount, message.Counter);
 
                         try
                         {
                             // Indsæt delay før requeue
                             await Task.Delay(1000); // Vent 1 sekund
-                            _logger.LogDebug("Delay before requeue finished for message Counter={Counter}", message.Counter);
+                            _logger.LogDebug("Delay before requeue finished for message Original Counter={OriginalCounter}, RetryCount={RetryCount}", message.Counter, message.RetryCount);
 
                             var requeuedBody = JsonSerializer.SerializeToUtf8Bytes(message);
 
@@ -130,12 +131,14 @@ public class RabbitMqConsumer :IDisposable
                                                 routingKey: _queueName,
                                                 basicProperties: null, // Overvej persistens her også
                                                 body: requeuedBody);
-                            _logger.LogInformation("Message requeued successfully with Counter={Counter}. Acking original message.", message.Counter);
+                            _logger.LogInformation("Message requeued successfully with Original Counter={OriginalCounter}, new RetryCount={RetryCount}. Acking original message.",
+                                               message.Counter, message.RetryCount);
                             _channel.BasicAck(ea.DeliveryTag, false); // Ack den *originale* besked, da vi har genpubliceret den
                         }
                         catch (Exception reqEx)
                         {
-                            _logger.LogError(reqEx, "Error during requeue process for message Counter={Counter}. Nacking original message (no requeue).", message.Counter);
+                            _logger.LogError(reqEx, "Error during requeue process for message Original Counter={OriginalCounter}, RetryCount={RetryCount}. Nacking original message (no requeue).",
+                                         message.Counter, message.RetryCount);
                             // Fejl under delay eller republishing - Nack den originale uden requeue
                             _channel.BasicNack(ea.DeliveryTag, false, false);
                         }
