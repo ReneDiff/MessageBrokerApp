@@ -19,6 +19,7 @@ public class MessageHandlerOneMinuteTests
         _handler = new MessageHandler(new NullLogger<MessageHandler>());
     }
 
+    // Slightly irrelevant
     [Test]
     public void HandleMessage_EvenSecondAnd59SecondsOld_SaveToDatabase()
     {
@@ -67,12 +68,13 @@ public class MessageHandlerOneMinuteTests
         Assert.That(result, Is.EqualTo(MessageHandlingResult.Discard));
     }
 
+    // Slightly irrelevant
     [Test]
     public void HandleMessage_OddSecondAnd59SecondsOld_RequeueWithIncrement()
     {
         // Arrange
         var now = DateTime.UtcNow;
-        var oneMinuteAgoEvenSecond = now.AddMinutes(-1).AddSeconds(1 - now.Second % 2);
+        var oneMinuteAgoEvenSecond = now.AddMinutes(-1).AddSeconds(3 - now.Second % 2);
         var msg = new Message 
         { 
             Timestamp = oneMinuteAgoEvenSecond, 
