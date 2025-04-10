@@ -37,7 +37,9 @@ public class RabbitMqProducer : IDisposable // Implementer IDisposable
                 _connection = factory.CreateConnection();
                 _channel = _connection.CreateModel();
 
-                // QueueDeclare er uændret, men overvej durable: true senere
+                // durable: false betyder, at køen *ikke* overlever en genstart af RabbitMQ brokeren.
+                // Til simpel test/demo vurderer vi at det er OK. I produktion sættes den typisk til true
+                // (kræver også, at beskeder sendes som persistent).
                 _channel.QueueDeclare(queue: QueueName,
                                       durable: false,
                                       exclusive: false,
