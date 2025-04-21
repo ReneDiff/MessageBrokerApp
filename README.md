@@ -2,7 +2,7 @@
 
 ## Introduktion
 
-Dette projekt er en løsning til en kodetest for Trifork. Opgaven består i at udvikle et system med to .NET 8-applikationer (`MessageProducer` og `MessageConsumer`), der kommunikerer via en message broker (RabbitMQ) og gemmer udvalgte data i en PostgreSQL-database. Hele infrastrukturen (RabbitMQ, PostgreSQL, pgAdmin) køres lokalt via Docker Compose.
+Dette projekt er en løsning til mindre kode udfordring. Opgaven består i at udvikle et system med to .NET 8-applikationer (`MessageProducer` og `MessageConsumer`), der kommunikerer via en message broker (RabbitMQ) og gemmer udvalgte data i en PostgreSQL-database. Hele infrastrukturen (RabbitMQ, PostgreSQL, pgAdmin) køres lokalt via Docker Compose.
 
 **Kernefunktionalitet:**
 
